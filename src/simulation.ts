@@ -1,9 +1,11 @@
 import { City } from "./city";
+import { Road } from "./road";
 import { Vector } from "./vector";
 
 export class Simulation {
   cities: Array<City> = [];
-  private static TIME_BETWEEN_CITIES = 1000;
+  roads: Array<Road> = [];
+  private static TIME_BETWEEN_CITIES = 500;
   /**
    * Milliseconds until the next city spawn
    */
@@ -42,12 +44,27 @@ export class Simulation {
             City.REQUIRED_SPACE
         )
       ) {
-        this.cities.push(new City(candidateLocation));
+        const newCity = new City(candidateLocation);
+        // Add new roads for this new city
+        this.roads = [
+          ...this.roads,
+          ...this.cities
+            .filter(
+              (city) =>
+                city.location.distanceBetween(candidateLocation) <
+                City.ROAD_DISTANCE
+            )
+            .map((city) => new Road(newCity, city)),
+        ];
+        this.cities.push(newCity);
       }
     }
+
+    // TODO city size increase?
   }
 
-  paintSelf(canvasRef: CanvasRenderingContext2D) {
-    this.cities.forEach((city) => city.paintSelf(canvasRef));
+  paintSelf(canvas: CanvasRenderingContext2D) {
+    this.roads.forEach((road) => road.paintSelf(canvas));
+    this.cities.forEach((city) => city.paintSelf(canvas));
   }
 }

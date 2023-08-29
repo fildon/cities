@@ -4,7 +4,11 @@ export class City {
   /**
    * Radius of clear space required around a city
    */
-  public static REQUIRED_SPACE = 100;
+  public static REQUIRED_SPACE = 50;
+  /**
+   * The maximum distance over which a city will connect by road to another city
+   */
+  public static ROAD_DISTANCE = 90;
   /**
    * The size of the city as used by system logic.
    * Can increase only in discrete integer values.
@@ -20,7 +24,7 @@ export class City {
     this.age += time;
   }
 
-  paintSelf(canvasRef: CanvasRenderingContext2D) {
+  paintSelf(canvas: CanvasRenderingContext2D) {
     /**
      * We do some maths here to get the appearance of the city growing up to its logical size.
      * The aim is to have a smooth monotonic function that approaches the logical size over time.
@@ -30,26 +34,15 @@ export class City {
     const animatedSize =
       (this.size * Math.atan(this.age / 1000)) / (Math.PI / 2);
 
-    canvasRef.beginPath();
-    canvasRef.arc(
-      this.location.x,
-      this.location.y,
-      City.REQUIRED_SPACE,
-      0,
-      2 * Math.PI
-    );
-    canvasRef.fillStyle = `rgba(0, 255, 0, ${animatedSize / 10})`;
-    canvasRef.fill();
-
-    canvasRef.beginPath();
-    canvasRef.arc(
+    canvas.beginPath();
+    canvas.arc(
       this.location.x,
       this.location.y,
       animatedSize * 10,
       0,
       2 * Math.PI
     );
-    canvasRef.fillStyle = "blue";
-    canvasRef.fill();
+    canvas.fillStyle = "blue";
+    canvas.fill();
   }
 }
