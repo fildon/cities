@@ -24,6 +24,8 @@ class City {
     /**
      * We do some maths here to get the appearance of the city growing up to its logical size.
      * The aim is to have a smooth monotonic function that approaches the logical size over time.
+     *
+     * TODO animation will jump when size does
      */
     const animatedSize =
       (this.size * Math.atan(this.age / 1000)) / (Math.PI / 2);
@@ -64,6 +66,11 @@ class Simulation {
       this.cities.push(
         new City(this.width * Math.random(), this.height * Math.random())
       );
+    }
+
+    // TODO something smarter to clean up over time
+    while (this.cities.length > 100) {
+      this.cities = this.cities.slice(1);
     }
   }
 
