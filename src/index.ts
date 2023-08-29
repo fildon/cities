@@ -7,27 +7,29 @@ const canvasContext = canvasElement.getContext("2d")!;
 class City {
   /**
    * The size of the city as used by system logic.
-   * Can increase in discrete integer values.
+   * Can increase only in discrete integer values.
    */
-  logicalSize = 1;
+  size = 1;
   /**
-   * The size of the city for the purposes of animation.
-   * Starts at zero, but rises smoothly over time to meet the logical size.
+   * The age of this city as measured in milliseconds
    */
-  animatedSize = 0;
+  age = 0;
   constructor(readonly x: number, readonly y: number) {}
 
   advanceByTime(time: number) {
-    this.animatedSize = Math.min(
-      this.logicalSize,
-      // Takes one second to increase animatedSize by 1
-      this.animatedSize + time / 1000
-    );
+    this.age += time;
   }
 
   paintSelf(canvasRef: CanvasRenderingContext2D) {
+    /**
+     * We do some maths here to get the appearance of the city growing up to its logical size.
+     * The aim is to have a smooth monotonic function that approaches the logical size over time.
+     */
+    const animatedSize =
+      (this.size * Math.atan(this.age / 1000)) / (Math.PI / 2);
+
     canvasRef.beginPath();
-    canvasRef.arc(this.x, this.y, this.animatedSize * 10, 0, 2 * Math.PI);
+    canvasRef.arc(this.x, this.y, animatedSize * 10, 0, 2 * Math.PI);
     canvasRef.fillStyle = "blue";
     canvasRef.fill();
   }
