@@ -6,6 +6,21 @@ export class Road {
     this.created_at = performance.now();
   }
 
+  isMember(city: City) {
+    return [this.start, this.end].includes(city);
+  }
+
+  isMutual() {
+    return this.start.logicalSize === this.end.logicalSize;
+  }
+
+  /**
+   * A road becomes outgrown when it connects cities which differ in size too greatly
+   */
+  isOutgrown() {
+    return Math.abs(this.start.logicalSize - this.end.logicalSize) > 1;
+  }
+
   paintSelf(canvas: CanvasRenderingContext2D) {
     const age = performance.now() - this.created_at;
     const matured = age > 1000;

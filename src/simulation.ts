@@ -14,7 +14,7 @@ export class Simulation {
 
   advanceByTime(time: number) {
     // Advance all existing cities by time.
-    // Note that this deliberately excludes the cities about to be created from time passing for this step.
+    // Note that this deliberately excludes the cities about to be created during this step.
     // Newly created cities will get advanced on the next frame.
     this.cities.forEach((city) => city.advanceByTime(time));
 
@@ -26,6 +26,27 @@ export class Simulation {
       qtyToCreate += 1;
     }
 
+    this.createNewCities(qtyToCreate);
+
+    this.evolveCities();
+  }
+
+  private roadsForCity(city: City) {
+    return this.roads.filter((road) => road.isMember(city));
+  }
+
+  private evolveCities() {
+    const citiesToEvolve = this.cities.filter((city) =>
+      city.isReadyToEvolve(this.roadsForCity(city))
+    );
+
+    citiesToEvolve.forEach((city) => city.evolve());
+
+    // Remove outgrown roads
+    this.roads = this.roads.filter((road) => !road.isOutgrown());
+  }
+
+  private createNewCities(qtyToCreate: number) {
     while (qtyToCreate > 0) {
       qtyToCreate -= 1;
 
@@ -45,22 +66,24 @@ export class Simulation {
         )
       ) {
         const newCity = new City(candidateLocation);
-        // Add new roads for this new city
-        this.roads = [
-          ...this.roads,
-          ...this.cities
-            .filter(
-              (city) =>
-                city.location.distanceBetween(candidateLocation) <
-                City.ROAD_DISTANCE
-            )
-            .map((city) => new Road(newCity, city)),
-        ];
+
+        const citiesToConnectTo = this.cities.filter(
+          (city) =>
+            city.location.distanceBetween(candidateLocation) <
+            City.ROAD_DISTANCE
+        );
+
+        const newRoads = citiesToConnectTo.map(
+          (city) => new Road(newCity, city)
+        );
+
+        if (newRoads.length > 0) {
+          this.roads = [...this.roads, ...newRoads];
+        }
+
         this.cities.push(newCity);
       }
     }
-
-    // TODO city size increase?
   }
 
   paintSelf(canvas: CanvasRenderingContext2D) {
