@@ -4,7 +4,19 @@ const CANVAS_WIDTH = 1000;
 const canvasElement = document.querySelector("canvas")!;
 const canvasContext = canvasElement.getContext("2d")!;
 
+class Vector {
+  constructor(public x: number, public y: number) {}
+
+  distanceBetween(other: Vector) {
+    return Math.sqrt((this.x - other.x) ** 2 + (this.y - other.y) ** 2);
+  }
+}
+
 class City {
+  /**
+   * Radius of clear space required around a city
+   */
+  public static REQUIRED_SPACE = 100;
   /**
    * The size of the city as used by system logic.
    * Can increase only in discrete integer values.
@@ -14,7 +26,7 @@ class City {
    * The age of this city as measured in milliseconds
    */
   age = 0;
-  constructor(readonly x: number, readonly y: number) {}
+  constructor(readonly location: Vector) {}
 
   advanceByTime(time: number) {
     this.age += time;
@@ -31,7 +43,24 @@ class City {
       (this.size * Math.atan(this.age / 1000)) / (Math.PI / 2);
 
     canvasRef.beginPath();
-    canvasRef.arc(this.x, this.y, animatedSize * 10, 0, 2 * Math.PI);
+    canvasRef.arc(
+      this.location.x,
+      this.location.y,
+      City.REQUIRED_SPACE,
+      0,
+      2 * Math.PI
+    );
+    canvasRef.fillStyle = `rgba(0, 255, 0, ${animatedSize / 10})`;
+    canvasRef.fill();
+
+    canvasRef.beginPath();
+    canvasRef.arc(
+      this.location.x,
+      this.location.y,
+      animatedSize * 10,
+      0,
+      2 * Math.PI
+    );
     canvasRef.fillStyle = "blue";
     canvasRef.fill();
   }
@@ -62,15 +91,24 @@ class Simulation {
 
     while (qtyToCreate > 0) {
       qtyToCreate -= 1;
-      // TODO avoid building where it is too crowded
-      this.cities.push(
-        new City(this.width * Math.random(), this.height * Math.random())
-      );
-    }
 
-    // TODO something smarter to clean up over time
-    while (this.cities.length > 100) {
-      this.cities = this.cities.slice(1);
+      /**
+       * Avoid building where it is too crowded.
+       * Note this this silently drops candidates which are too crowded.
+       */
+      const candidateLocation = new Vector(
+        this.width * Math.random(),
+        this.height * Math.random()
+      );
+      if (
+        this.cities.every(
+          (city) =>
+            candidateLocation.distanceBetween(city.location) >
+            City.REQUIRED_SPACE
+        )
+      ) {
+        this.cities.push(new City(candidateLocation));
+      }
     }
   }
 
@@ -86,9 +124,9 @@ const step = (now: number) => {
   const elapsed = now - lastFrame;
   lastFrame = now;
 
-  canvasContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
   simulation.advanceByTime(elapsed);
+
+  canvasContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   simulation.paintSelf(canvasContext);
 
   window.requestAnimationFrame(step);
