@@ -21,6 +21,13 @@ export class Road {
     return Math.abs(this.start.logicalSize - this.end.logicalSize) > 1;
   }
 
+  /**
+   * The size of the smallest city connected to this road
+   */
+  getSmallest() {
+    return Math.min(this.start.logicalSize, this.end.logicalSize);
+  }
+
   paintSelf(canvas: CanvasRenderingContext2D) {
     const age = performance.now() - this.created_at;
     const matured = age > 1000;

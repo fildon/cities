@@ -29,18 +29,53 @@ export class Simulation {
     this.createNewCities(qtyToCreate);
 
     this.evolveCities();
+
+    this.collapseCities();
+
+    this.cleanDeadCities();
   }
 
-  private roadsForCity(city: City) {
-    return this.roads.filter((road) => road.isMember(city));
+  /**
+   * A city is dead when it should be fully removed from the simulation
+   */
+  private cleanDeadCities() {
+    const citiesToRemove = new Set(
+      this.cities.filter((city) => city.shouldBeRemoved())
+    );
+    if (citiesToRemove.size === 0) return;
+
+    this.cities = this.cities.filter((city) => !citiesToRemove.has(city));
+    // Remove associated roads
+    this.roads = this.roads.filter(
+      (road) => !citiesToRemove.has(road.start) && !citiesToRemove.has(road.end)
+    );
+  }
+
+  private neighboursForCity(city: City) {
+    return this.roads.flatMap((road) =>
+      // If the city we want is at the start, the neighbour is at the end
+      // or vice versa
+      road.start === city ? road.end : road.end === city ? road.start : []
+    );
+  }
+
+  /**
+   * Cities collapse when they are no longer supported
+   */
+  private collapseCities() {
+    this.cities
+      .filter((city) => !city.isSupported(this.neighboursForCity(city)))
+      .forEach((city) => city.collapse());
   }
 
   private evolveCities() {
     const citiesToEvolve = this.cities.filter((city) =>
-      city.isReadyToEvolve(this.roadsForCity(city))
+      city.isReadyToEvolve(this.neighboursForCity(city))
     );
 
     citiesToEvolve.forEach((city) => city.evolve());
+
+    // TODO create new roads based on new city range
 
     // Remove outgrown roads
     this.roads = this.roads.filter((road) => !road.isOutgrown());
