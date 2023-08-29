@@ -30,25 +30,61 @@
      * How long since the city last evolved in milliseconds
      */
     last_evolved = 0;
+    /**
+     * Whether this city is undergoing collapse
+     */
+    isCollapsing = false;
     advanceByTime(time) {
       this.age += time;
       this.last_evolved += time;
+      if (this.isCollapsing) {
+        this.animatedSize -= time / 1e4;
+        return;
+      }
       if (time > 1e3) {
         this.animatedSize = this.logicalSize;
       } else {
         this.animatedSize = this.animatedSize + (this.logicalSize - this.animatedSize) * (time / 1e3);
       }
     }
-    isReadyToEvolve(connectedRoads) {
+    /**
+     * A city should be removed when it has been collapsing,
+     * and has completely withered away to nothing
+     */
+    shouldBeRemoved() {
+      return this.isCollapsing && this.animatedSize <= 0;
+    }
+    isReadyToEvolve(neighbours) {
+      if (this.isCollapsing)
+        return false;
       if (this.last_evolved < 1e3)
         return false;
-      if (connectedRoads.filter((road) => road.isMutual()).length < 3)
+      if (neighbours.filter(
+        (neighbour) => neighbour.logicalSize >= this.logicalSize
+      ).length < 3)
         return false;
       return Math.random() < 0.05;
     }
     evolve() {
       this.logicalSize += 1;
       this.last_evolved = 0;
+    }
+    /**
+     * A city is supported if it is either size 1
+     * or it is connected to at least one city exactly one size lower
+     */
+    isSupported(neighbours) {
+      if (this.logicalSize === 1)
+        return true;
+      return neighbours.some(
+        (neighbour) => !neighbour.isCollapsing && neighbour.logicalSize === this.logicalSize - 1
+      );
+    }
+    /**
+     * Mark this city for collapse
+     */
+    collapse() {
+      this.isCollapsing = true;
     }
     paintSelf(canvas) {
       canvas.beginPath();
@@ -59,7 +95,13 @@
         0,
         2 * Math.PI
       );
-      canvas.fillStyle = ["green", "yellow", "orange", "red"][this.logicalSize - 1] ?? "red";
+      canvas.fillStyle = this.isCollapsing ? (
+        // A collapsing city is grey
+        "grey"
+      ) : (
+        // Otherwise colour the city based on its size
+        ["green", "yellow", "orange", "red"][this.logicalSize - 1] ?? "red"
+      );
       canvas.fill();
       canvas.beginPath();
       canvas.arc(
@@ -94,6 +136,12 @@
      */
     isOutgrown() {
       return Math.abs(this.start.logicalSize - this.end.logicalSize) > 1;
+    }
+    /**
+     * The size of the smallest city connected to this road
+     */
+    getSmallest() {
+      return Math.min(this.start.logicalSize, this.end.logicalSize);
     }
     paintSelf(canvas) {
       const age = performance.now() - this.created_at;
@@ -145,13 +193,41 @@
       }
       this.createNewCities(qtyToCreate);
       this.evolveCities();
+      this.collapseCities();
+      this.cleanDeadCities();
     }
-    roadsForCity(city) {
-      return this.roads.filter((road) => road.isMember(city));
+    /**
+     * A city is dead when it should be fully removed from the simulation
+     */
+    cleanDeadCities() {
+      const citiesToRemove = new Set(
+        this.cities.filter((city) => city.shouldBeRemoved())
+      );
+      if (citiesToRemove.size === 0)
+        return;
+      this.cities = this.cities.filter((city) => !citiesToRemove.has(city));
+      this.roads = this.roads.filter(
+        (road) => !citiesToRemove.has(road.start) && !citiesToRemove.has(road.end)
+      );
+    }
+    neighboursForCity(city) {
+      return this.roads.flatMap(
+        (road) => (
+          // If the city we want is at the start, the neighbour is at the end
+          // or vice versa
+          road.start === city ? road.end : road.end === city ? road.start : []
+        )
+      );
+    }
+    /**
+     * Cities collapse when they are no longer supported
+     */
+    collapseCities() {
+      this.cities.filter((city) => !city.isSupported(this.neighboursForCity(city))).forEach((city) => city.collapse());
     }
     evolveCities() {
       const citiesToEvolve = this.cities.filter(
-        (city) => city.isReadyToEvolve(this.roadsForCity(city))
+        (city) => city.isReadyToEvolve(this.neighboursForCity(city))
       );
       citiesToEvolve.forEach((city) => city.evolve());
       this.roads = this.roads.filter((road) => !road.isOutgrown());
