@@ -15,11 +15,22 @@
       canvas {
         border: 1px solid black;
       }
+      p {
+        max-width: 60ch;
+      }
     </style>
   </head>
   <body>
     <h1>Cities</h1>
-    <p>A simple simulation of population centers.</p>
+    <p>
+      A simple simulation of population centers. Small green cities can emerge
+      at any time, so long as there is enough space. As new cities emerge, they
+      will connect to neighbours. Once a city is connected to 3 others, it can
+      "evolve" to a larger city. Larger cities can evolve again, but only when
+      connected to 3 other cities of the same size or larger. If at any time a
+      city has evolved, but is no longer connected to a smaller city, it dies
+      out.
+    </p>
     <p>Source code on <a href="https://github.com/fildon/cities">Github</a>.</p>
     <canvas width="1000" height="1000"></canvas>
   </body>
